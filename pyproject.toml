@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-preflight"
+version = "0.1.0"
+description = "Zero-dependency OpenAI API migration, GPT-6.2 readiness, and agent reliability scanner with SARIF 2.1.0 reporting."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+  { name = "dev-stratum", email = "335769801+dev-stratum@users.noreply.github.com" },
+]
+keywords = ["openai", "gpt-6.2", "responses-api", "agents", "static-analysis", "sarif", "github-action"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0"]
+
+[project.scripts]
+agent-preflight = "agent_preflight.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dev-stratum/agent-preflight"
+Repository = "https://github.com/dev-stratum/agent-preflight"
+Issues = "https://github.com/dev-stratum/agent-preflight/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+agent_preflight = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src"
+files = ["src"]

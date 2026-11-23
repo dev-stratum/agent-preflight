@@ -1,0 +1,104 @@
+name: "agent-preflight"
+description: "Zero-dependency OpenAI API migration and agent reliability pre-flight scanner with SARIF 2.1.0 reporting."
+author: "dev-stratum"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  path:
+    description: "File(s) or directory path(s) to scan (space-separated)."
+    required: false
+    default: "."
+  format:
+    description: "Primary stdout report format: text, json, sarif, or github."
+    required: false
+    default: "github"
+  sarif-file:
+    description: "Optional output path to write a SARIF 2.1.0 JSON report (set empty to disable)."
+    required: false
+    default: "agent-preflight.sarif"
+  fail-on:
+    description: "Minimum severity threshold to fail the step: error, warning, note, or none."
+    required: false
+    default: "error"
+  exclude:
+    description: "Comma-separated directory names or glob patterns to exclude."
+    required: false
+    default: ""
+  disable:
+    description: "Comma-separated rule IDs to skip (e.g., APF007,APF103)."
+    required: false
+    default: ""
+  python-version:
+    description: "Python version used to run agent-preflight."
+    required: false
+    default: "3.12"
+
+outputs:
+  findings-count:
+    description: "Total non-suppressed findings detected."
+    value: ${{ steps.scan.outputs.findings-count }}
+  errors-count:
+    description: "Number of error-severity findings."
+    value: ${{ steps.scan.outputs.errors-count }}
+  warnings-count:
+    description: "Number of warning-severity findings."
+    value: ${{ steps.scan.outputs.warnings-count }}
+  files-scanned:
+    description: "Total Python, TypeScript, and JavaScript files audited."
+    value: ${{ steps.scan.outputs.files-scanned }}
+  sarif-file:
+    description: "Path to generated SARIF 2.1.0 report, if requested."
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Run agent-preflight
+      id: scan
+      shell: bash
+      env:
+        APF_ACTION_PATH: ${{ github.action_path }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_DISABLE: ${{ inputs.disable }}
+      run: |
+        set -euo pipefail
+        ACTION_SRC="${APF_ACTION_PATH}/src"
+        if [ "${RUNNER_OS:-}" = "Windows" ]; then
+          SEP=";"
+        else
+          case "$(uname -s)" in
+            MINGW*|MSYS*|CYGWIN*) SEP=";" ;;
+            *) SEP=":" ;;
+          esac
+        fi
+        if [ -n "${PYTHONPATH:-}" ]; then
+          export PYTHONPATH="${ACTION_SRC}${SEP}${PYTHONPATH}"
+        else
+          export PYTHONPATH="${ACTION_SRC}"
+        fi
+        CMD_ARGS=(--format "${INPUT_FORMAT}" --fail-on "${INPUT_FAIL_ON}")
+        if [ -n "${GITHUB_OUTPUT:-}" ]; then
+          CMD_ARGS+=(--github-output "${GITHUB_OUTPUT}")
+        fi
+        if [ -n "${INPUT_SARIF_FILE}" ]; then
+          CMD_ARGS+=(--sarif-out "${INPUT_SARIF_FILE}")
+        fi
+        if [ -n "${INPUT_EXCLUDE}" ]; then
+          CMD_ARGS+=(--exclude "${INPUT_EXCLUDE}")
+        fi
+        if [ -n "${INPUT_DISABLE}" ]; then
+          CMD_ARGS+=(--disable "${INPUT_DISABLE}")
+        fi
+        IFS=' ' read -r -a TARGET_PATHS <<< "${INPUT_PATH}"
+        python -m agent_preflight.cli "${CMD_ARGS[@]}" "${TARGET_PATHS[@]}"
