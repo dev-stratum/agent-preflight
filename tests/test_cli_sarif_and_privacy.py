@@ -121,12 +121,12 @@ def test_repository_zero_pii_and_zero_machine_path_leaks() -> None:
         base = REPO_ROOT / folder
         if base.exists():
             targets.extend(p for p in base.rglob("*") if p.is_file())
-    for top_name in ("action.yml", "pyproject.toml", "README.md", "CHANGELOG.md", "LICENSE", ".gitignore"):
+    for top_name in ("action.yml", "pyproject.toml", "README.md", "CHANGELOG.md", "LICENSE", ".gitignore", ".gitattributes"):
         if (p := REPO_ROOT / top_name).exists():
             targets.append(p)
 
     for path in targets:
-        if path.suffix in (".pyc", ".pyo"):
+        if path.suffix in (".pyc", ".pyo") or ".egg-info" in path.parts or "__pycache__" in path.parts:
             continue
         content = path.read_text(encoding="utf-8")
         for pat in banned_paths:
